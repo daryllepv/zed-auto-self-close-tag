@@ -1,0 +1,7 @@
+id = "auto-self-close-tag"
+name = "Auto Self-close Tag"
+version = "0.0.1"
+schema_version = 1
+authors = ["Darylle Villanueva <darylle.p.v@gmail.com>"]
+description = "Automatically inserts `>` when you type / at the end of an opening tag, turning `<Component /` into `<Component />`. Very simple"
+repository = "https://github.com/daryllepv/auto-self-close-tag"
