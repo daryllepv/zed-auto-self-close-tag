@@ -1,7 +1,12 @@
-id = "auto-self-close-tag"
+id = "auto-self-close-tag-lsp"
 name = "Auto Self-close Tag"
 version = "0.0.1"
 schema_version = 1
 authors = ["Darylle Villanueva <darylle.p.v@gmail.com>"]
-description = "Automatically inserts `>` when you type / at the end of an opening tag, turning `<Component /` into `<Component />`. Very simple"
+description = "Completes self-closing tags in TSX, JSX, Astro, Svelte, Vue, HTML, and XML when you type /."
 repository = "https://github.com/daryllepv/auto-self-close-tag"
+
+[language_servers.auto-self-close-tag]
+name = "Auto Self-close Tag"
+languages = ["TSX", "JavaScript", "Astro", "Svelte", "Vue.js", "HTML", "XML"]
+language_ids = { "TSX" = "typescriptreact", "JavaScript" = "javascriptreact", "Astro" = "astro", "Svelte" = "svelte", "Vue.js" = "vue", "HTML" = "html", "XML" = "xml" }

@@ -1,3 +1,16 @@
+[package]
+name = "auto-self-close-tag"
+version = "0.0.1"
+edition = "2024"
+publish = false
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+zed_extension_api = "0.7"
+
 [workspace]
 members = ["server"]
 resolver = "3"
@@ -11,3 +24,6 @@ redundant_clone = "warn"
 needless_collect = "warn"
 expect_used = "warn"
 unwrap_used = "warn"
+
+[lints]
+workspace = true
