@@ -39,8 +39,8 @@ You’ll need Zed and Rust installed through rustup. Install the Zed language ex
 1. Clone this repository and build the companion language server:
 
    ```sh
-   git clone https://github.com/daryllepv/auto-self-close-tag.git
-   cd auto-self-close-tag
+   git clone https://github.com/daryllepv/zed-auto-self-close-tag.git
+   cd zed-auto-self-close-tag
    cargo build --release -p auto-self-close-tag-lsp --locked
    ```
 
@@ -55,7 +55,7 @@ You’ll need Zed and Rust installed through rustup. Install the Zed language ex
   "lsp": {
     "auto-self-close-tag": {
       "binary": {
-        "path": "/absolute/path/to/auto-self-close-tag/target/release/auto-self-close-tag-lsp"
+        "path": "/absolute/path/to/zed-auto-self-close-tag/target/release/auto-self-close-tag-lsp"
       }
     }
   },
