@@ -1,2 +1,5 @@
 /target/
 /extension.wasm
+
+mempalace.yaml
+entities.json
