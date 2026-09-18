@@ -1,10 +1,10 @@
 id = "auto-self-close-tag-lsp"
 name = "Auto Self-close Tag"
-version = "0.0.1"
+version = "0.1.0"
 schema_version = 1
 authors = ["Darylle Villanueva <darylle.p.v@gmail.com>"]
 description = "Completes self-closing tags in TSX, JSX, Astro, Svelte, Vue, HTML, and XML when you type /."
-repository = "https://github.com/daryllepv/auto-self-close-tag"
+repository = "https://github.com/daryllepv/zed-auto-self-close-tag"
 
 [language_servers.auto-self-close-tag]
 name = "Auto Self-close Tag"

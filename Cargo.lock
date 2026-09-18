@@ -37,14 +37,14 @@ dependencies = [
 
 [[package]]
 name = "auto-self-close-tag"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "zed_extension_api",
 ]
 
 [[package]]
 name = "auto-self-close-tag-lsp"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "lsp-server",
  "lsp-types",
