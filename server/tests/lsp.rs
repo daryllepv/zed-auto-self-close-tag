@@ -366,3 +366,30 @@ fn unidentified_malformed_change_suspends_documents_until_reopen_or_full_replace
             .contains("Cannot handle textDocument/didChange")
     );
 }
+
+#[test]
+fn empty_pair_conversion_survives_client_application_and_undo() {
+    let (mut server, _) = Server::start();
+    server.open(URI, "<p></p>");
+    server.change(URI, 2, json!([{
+        "range": {"start": {"line": 0, "character": 2}, "end": {"line": 0, "character": 2}}, "text": "/"
+    }]));
+    let edit = server.format(URI, 0, 3);
+    assert_eq!(
+        edit,
+        json!([{
+            "range": {"start": {"line": 0, "character": 2}, "end": {"line": 0, "character": 8}}, "newText": " />"
+        }])
+    );
+    server.change(
+        URI,
+        3,
+        json!([{"range": edit[0]["range"], "text": edit[0]["newText"]}]),
+    );
+    assert_eq!(server.format(URI, 0, 4), json!([]));
+    server.change(URI, 4, json!([{
+        "range": {"start": {"line": 0, "character": 2}, "end": {"line": 0, "character": 5}}, "text": "/></p>"
+    }]));
+    assert_eq!(server.format(URI, 0, 3), edit);
+    assert!(server.finish().is_empty());
+}

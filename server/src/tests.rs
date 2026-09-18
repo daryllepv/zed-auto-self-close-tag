@@ -265,3 +265,112 @@ fn earlier_multiline_edits_preserve_completion_at_shifted_positions() {
         assert_eq!(document.complete(position).unwrap(), fresh, "{expected}");
     }
 }
+
+#[test]
+fn empty_pairs_collapse_without_changing_surrounding_text() {
+    for (language, source, expected) in [
+        (Language::Tsx, "<p/|></p>", "<p />"),
+        (Language::Jsx, "<UI.Button /|></UI.Button>", "<UI.Button />"),
+        (Language::Tsx, "<p><p/|></p></p>", "<p><p /></p>"),
+        (
+            Language::Tsx,
+            "<C title=\"😀\"\r\n /|></C><Other />",
+            "<C title=\"😀\"\r\n /><Other />",
+        ),
+        (Language::Tsx, "<ns:Tag/|></ns:Tag>", "<ns:Tag />"),
+        (Language::Astro, "<p/|></p>", "<p />"),
+        (
+            Language::Astro,
+            "{show && <Card/|></Card>}",
+            "{show && <Card />}",
+        ),
+        (Language::Svelte, "<Card/|></Card>", "<Card />"),
+        (
+            Language::Vue,
+            "<template><p/|></p></template>",
+            "<template><p /></template>",
+        ),
+        (
+            Language::Html,
+            "<svg><path/|></path></svg>",
+            "<svg><path /></svg>",
+        ),
+        (
+            Language::Xml,
+            "<root><item/|></item></root>",
+            "<root><item /></root>",
+        ),
+        (Language::Xml, "<ns:item/|></ns:item\r\n>", "<ns:item />"),
+    ] {
+        let (text, position) = fixture(source);
+        let mut document = Document::new(language, &text).unwrap();
+        let fresh = document.complete(position).unwrap();
+        let slash = char_offset(&document.text, position).unwrap() - 1;
+        let start = position_at(&document.text, slash).unwrap();
+        let mut original = document.text.clone();
+        original.remove(slash..slash + 1);
+        let mut document = Document::new(language, &original.to_string()).unwrap();
+        document
+            .change(&[TextDocumentContentChangeEvent {
+                range: Some(Range::new(start, start)),
+                range_length: None,
+                text: "/".into(),
+            }])
+            .unwrap();
+        let edit = document
+            .complete(position)
+            .unwrap()
+            .unwrap_or_else(|| panic!("{language:?}: {source}"));
+        assert_eq!(Some(edit.clone()), fresh, "{language:?}: {source}");
+        assert_eq!(document.text.to_string(), text);
+        assert_eq!(document.complete(position).unwrap(), Some(edit.clone()));
+        document
+            .change(&[TextDocumentContentChangeEvent {
+                range: Some(edit.range),
+                range_length: None,
+                text: edit.new_text,
+            }])
+            .unwrap();
+        assert_eq!(
+            document.text.to_string(),
+            expected,
+            "{language:?}: {source}"
+        );
+    }
+}
+
+#[test]
+fn pair_conversion_preserves_content_and_rejects_invalid_contexts() {
+    for (language, source) in [
+        (Language::Tsx, "<p/|>text</p>"),
+        (Language::Tsx, "<p/|> </p>"),
+        (Language::Tsx, "<p/|>\n</p>"),
+        (Language::Tsx, "<p/|><C /></p>"),
+        (Language::Tsx, "<p/|>{value}</p>"),
+        (Language::Tsx, "<p/|></other>"),
+        (Language::Tsx, "<P/|></p>"),
+        (Language::Tsx, "<p/|>"),
+        (Language::Tsx, "const s = '<p/|></p>';"),
+        (Language::Tsx, "// <p/|></p>"),
+        (Language::Tsx, "<C value=\"<p/|></p>\" />"),
+        (Language::Html, "<p/|></p>"),
+        (Language::Svelte, "<p/|></p>"),
+        (Language::Astro, "{ '<p/|></p>' }"),
+        (Language::Vue, "<!-- <p/|></p> -->"),
+        (Language::Xml, "<item/|></other>"),
+        (Language::Xml, "<![CDATA[<item/|></item>]]>"),
+        (Language::Xml, "<item/|></item"),
+        (Language::Vue, "<script>const s = '<p/|></p>';</script>"),
+        (Language::Svelte, "<textarea><Card/|></Card></textarea>"),
+        (Language::Tsx, "<p/|><!-- comment --></p>"),
+    ] {
+        let (text, position) = fixture(source);
+        let mut document = Document::new(language, &text).unwrap();
+        assert_eq!(
+            document.complete(position).unwrap(),
+            None,
+            "{language:?}: {source}"
+        );
+        assert_eq!(document.text.to_string(), text);
+    }
+}

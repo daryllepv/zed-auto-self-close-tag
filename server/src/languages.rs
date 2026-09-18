@@ -4,6 +4,7 @@ mod astro;
 mod html;
 mod jsx;
 mod markup;
+mod pairs;
 mod svelte;
 mod vue;
 mod xml;
@@ -60,6 +61,15 @@ impl Language {
             Self::Html => tree_sitter_html::LANGUAGE.into(),
             Self::Xml => tree_sitter_xml::LANGUAGE_XML.into(),
         }
+    }
+
+    pub(crate) fn empty_pair_end(
+        self,
+        tree: &Tree,
+        text: &Rope,
+        delimiter_byte: usize,
+    ) -> Option<usize> {
+        pairs::empty_pair_end(self, tree, text, delimiter_byte)
     }
 
     // The tree includes the proposed `>`. Each language decides whether the

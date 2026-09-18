@@ -69,18 +69,7 @@ impl Document {
             if start > end {
                 return Err(Error::InvalidRange);
             }
-            let start_byte = text.char_to_byte(start);
-            let start_position = point(&text, start);
-            tree.edit(&InputEdit {
-                start_byte,
-                old_end_byte: text.char_to_byte(end),
-                new_end_byte: start_byte + change.text.len(),
-                start_position,
-                old_end_position: point(&text, end),
-                new_end_position: point_after(start_position, &change.text),
-            });
-            text.remove(start..end);
-            text.insert(start, &change.text);
+            replace(&mut text, &mut tree, start..end, &change.text);
         }
         self.text = text;
         self.tree = tree;
@@ -88,7 +77,8 @@ impl Document {
     }
 
     /// Completes a slash immediately before a zero-based UTF-16 position.
-    /// Returns no edit outside opening tags, for invalid positions, or when `>` exists.
+    /// Collapses empty tag pairs when `>` already exists; otherwise completes the delimiter.
+    /// Returns no edit outside supported opening tags or for invalid positions.
     /// The document is unchanged until the client sends the resulting change.
     ///
     /// # Errors
@@ -97,11 +87,11 @@ impl Document {
         let Some(offset) = char_offset(&self.text, position) else {
             return Ok(None);
         };
-        if offset == 0
-            || self.text.get_char(offset - 1) != Some('/')
-            || self.text.get_char(offset) == Some('>')
-        {
+        if offset == 0 || self.text.get_char(offset - 1) != Some('/') {
             return Ok(None);
+        }
+        if self.text.get_char(offset) == Some('>') {
+            return self.collapse_pair(offset);
         }
         let line_start = self.text.line_to_char(position.line as usize);
         let column = self.text.char_to_utf16_cu(offset) - self.text.char_to_utf16_cu(line_start);
@@ -148,6 +138,48 @@ impl Document {
         Ok(Some(TextEdit {
             range: Range::new(Position::new(position.line, column), position),
             new_text: "/>".into(),
+        }))
+    }
+
+    fn collapse_pair(&mut self, offset: usize) -> Result<Option<TextEdit>, Error> {
+        if self.text.get_char(offset + 1) != Some('<')
+            || self.text.get_char(offset + 2) != Some('/')
+        {
+            return Ok(None);
+        }
+        let slash = offset - 1;
+        let mut text = self.text.clone();
+        let mut tree = self.tree.clone();
+        // Recover the paired syntax before the slash changed the opening tag.
+        replace(&mut text, &mut tree, slash..offset, "");
+        let mut tree = parse(&mut self.parser, text.slice(..), Some(&tree))?;
+        let Some(end_byte) = self
+            .language
+            .empty_pair_end(&tree, &text, text.char_to_byte(slash))
+        else {
+            return Ok(None);
+        };
+        let end = text.byte_to_char(end_byte);
+        let new_text = if slash > 0 && text.char(slash - 1).is_whitespace() {
+            "/>"
+        } else {
+            " />"
+        };
+        replace(&mut text, &mut tree, slash..end, new_text);
+        let tree = parse(&mut self.parser, text.slice(..), Some(&tree))?;
+        let slash_byte = text.char_to_byte(slash) + new_text.len() - 2;
+        if !self.language.allows_self_close(&tree, &text, slash_byte)? {
+            return Ok(None);
+        }
+        let Some(start) = position_at(&self.text, slash) else {
+            return Ok(None);
+        };
+        let Some(end) = position_at(&self.text, end + 1) else {
+            return Ok(None);
+        };
+        Ok(Some(TextEdit {
+            range: Range::new(start, end),
+            new_text: new_text.into(),
         }))
     }
 }
@@ -200,6 +232,30 @@ fn point_after(mut start: Point, text: &str) -> Point {
         }
     }
     start
+}
+
+fn replace(text: &mut Rope, tree: &mut Tree, range: std::ops::Range<usize>, inserted: &str) {
+    let start_byte = text.char_to_byte(range.start);
+    let start_position = point(text, range.start);
+    tree.edit(&InputEdit {
+        start_byte,
+        old_end_byte: text.char_to_byte(range.end),
+        new_end_byte: start_byte + inserted.len(),
+        start_position,
+        old_end_position: point(text, range.end),
+        new_end_position: point_after(start_position, inserted),
+    });
+    text.remove(range.clone());
+    text.insert(range.start, inserted);
+}
+
+fn position_at(text: &Rope, offset: usize) -> Option<Position> {
+    let line = text.char_to_line(offset);
+    let column = text.char_to_utf16_cu(offset) - text.char_to_utf16_cu(text.line_to_char(line));
+    Some(Position::new(
+        u32::try_from(line).ok()?,
+        u32::try_from(column).ok()?,
+    ))
 }
 
 #[cfg(test)]
