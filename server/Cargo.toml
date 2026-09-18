@@ -20,5 +20,9 @@ tree-sitter-xml = "0.7"
 ropey = { version = "1.6", default-features = false, features = ["simd"] }
 thiserror = "2"
 
+[[bench]]
+name = "typing"
+harness = false
+
 [lints]
 workspace = true
